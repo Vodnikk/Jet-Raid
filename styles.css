@@ -1,0 +1,46 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+  background: #1a1a1a;
+}
+
+#gameCanvas {
+  display: block;
+  width: 900px;
+  height: 700px;
+}
+
+.gameContainer {
+  position: relative;
+}
+
+#intelAdvisor {
+  position: absolute;
+  right: -260px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 260px;
+  text-align: center;
+  color: #e8e8e8;
+  font-family: monospace;
+}
+
+#intelAdvisor img {
+  width: 100%;
+  image-rendering: pixelated;
+}
+
+#intelText {
+  margin-top: 8px;
+  font-size: 14px;
+}
