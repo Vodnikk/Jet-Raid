@@ -24,6 +24,18 @@ html, body {
   position: relative;
 }
 
+#finalTimer {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff4444;
+  font-family: "Press Start 2P", system-ui, sans-serif;
+  font-size: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+
 #intelAdvisor {
   position: absolute;
   right: -260px;
@@ -43,4 +55,37 @@ html, body {
 #intelText {
   margin-top: 8px;
   font-size: 14px;
+}
+
+#rulesOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#rulesOverlay .rulesCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+#rulesOverlay img {
+  width: 70%;
+  max-width: 600px;
+  image-rendering: pixelated;
+  margin-bottom: 24px;
+}
+
+#rulesText {
+  color: #e8e8e8;
+  font-family: "Press Start 2P", system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  white-space: pre-line;
 }

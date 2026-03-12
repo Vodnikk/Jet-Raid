@@ -83,6 +83,13 @@
   let paused = false;
   let intelPercent = 0;
 
+  // meta state: start menu & briefing
+  let gameStarted = false;
+  let inRulesIntro = false;
+  let rulesIntroStep = 0;
+  let rulesIntroElapsed = 0;
+  const RULES_INTRO_STEP_MS = 2600;
+
   // final mission state
   let inFinalMission = false;
   let missionPhase = 'fade_out'; // fade_out | fade_in | choose | fly_to_target | explode | result
@@ -650,6 +657,53 @@
     }
   }
 
+  function setAdvisorRulesStep(step) {
+    const rules = [
+      '1. Avoid missiles.',
+      '2. Destroy towers to collect intel.',
+      '3. Survive 1 minute & choose target.',
+    ];
+    const index = Math.max(0, Math.min(rules.length - 1, step));
+    const textEl = document.getElementById('intelText');
+    if (textEl) {
+      textEl.innerText = rules[index];
+    }
+     const rulesTextEl = document.getElementById('rulesText');
+     if (rulesTextEl) {
+       rulesTextEl.innerText = rules[index];
+     }
+    const gifEl = document.getElementById('advisorGif');
+    if (gifEl) {
+      const baseSrc = 'Assets/Images/cap.gif';
+      gifEl.src = `${baseSrc}?t=${Date.now()}`;
+    }
+    const rulesGifEl = document.getElementById('rulesCap');
+    if (rulesGifEl) {
+      const baseSrc = 'Assets/Images/cap.gif';
+      rulesGifEl.src = `${baseSrc}?t=${Date.now()}`;
+    }
+  }
+
+  function updateFinalStrikeTimerDom() {
+    const el = document.getElementById('finalTimer');
+    if (!el) return;
+
+    if (!gameStarted || inRulesIntro) {
+      el.style.visibility = 'hidden';
+      return;
+    }
+
+    if (!inFinalMission && !gameOver) {
+      const totalMs = 60000;
+      const remaining = Math.max(0, Math.floor((totalMs - timeAliveMs) / 1000));
+      const text = remaining > 0 ? `FINAL STRIKE IN ${remaining}` : 'FINAL STRIKE IMMINENT';
+      el.textContent = text;
+      el.style.visibility = 'visible';
+    } else {
+      el.style.visibility = 'hidden';
+    }
+  }
+
   function updateExplosions(dt) {
     for (let i = explosions.length - 1; i >= 0; i--) {
       const e = explosions[i];
@@ -790,10 +844,10 @@
   function drawHUD() {
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(10, 10, 230, 86);
+    ctx.fillRect(10, 10, 230, 106);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '16px sans-serif';
+    ctx.font = '16px \"Press Start 2P\", system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
@@ -816,7 +870,7 @@
     ctx.fillRect(barX, barY, filledW, barH);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '11px sans-serif';
+    ctx.font = '11px \"Press Start 2P\", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`INTEL ${intelPercent.toFixed(0)}%`, barX + barW / 2, barY + barH / 2);
@@ -903,6 +957,39 @@
     ctx.fillText('SPACE - Fire', width / 2, y);
     y += 26;
     ctx.fillText('WASD / Arrows - Move', width / 2, y);
+
+    ctx.restore();
+  }
+
+  function drawStartMenu() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '32px "Press Start 2P", system-ui, sans-serif';
+    ctx.fillText('JET INTEL', width / 2, height / 2 - 120);
+
+    ctx.font = '14px "Press Start 2P", system-ui, sans-serif';
+    ctx.fillText('CLICK TO START BRIEFING', width / 2, height / 2 - 40);
+
+    const btnW = 260;
+    const btnH = 52;
+    const btnX = width / 2 - btnW / 2;
+    const btnY = height / 2 + 10;
+
+    ctx.fillStyle = 'rgba(20,20,20,0.95)';
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.strokeStyle = '#ffcc66';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(btnX, btnY, btnW, btnH);
+
+    ctx.fillStyle = '#ffeb8a';
+    ctx.font = '16px "Press Start 2P", system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('START', width / 2, btnY + btnH / 2);
 
     ctx.restore();
   }
@@ -1274,8 +1361,41 @@
     jetY = height * (1 - CONFIG.jetHeightRatio);
   }
 
+  function updateRulesIntro(dt) {
+    if (!inRulesIntro) return;
+    const overlay = document.getElementById('rulesOverlay');
+    if (overlay) {
+      overlay.style.visibility = 'visible';
+    }
+    const sideAdvisor = document.getElementById('intelAdvisor');
+    if (sideAdvisor) {
+      sideAdvisor.style.visibility = 'hidden';
+    }
+    rulesIntroElapsed += dt;
+    if (rulesIntroElapsed >= RULES_INTRO_STEP_MS) {
+      rulesIntroElapsed = 0;
+      rulesIntroStep += 1;
+      if (rulesIntroStep >= 3) {
+        inRulesIntro = false;
+        gameStarted = true;
+        const textEl = document.getElementById('intelText');
+        if (textEl) {
+          textEl.innerText = 'Good hunting, pilot.';
+        }
+        if (overlay) {
+          overlay.style.visibility = 'hidden';
+        }
+        if (sideAdvisor) {
+          sideAdvisor.style.visibility = 'visible';
+        }
+      } else {
+        setAdvisorRulesStep(rulesIntroStep);
+      }
+    }
+  }
+
   function update(dt) {
-    if (!gameOver && !paused && !inFinalMission) {
+    if (!gameOver && !paused && !inFinalMission && gameStarted) {
       const s = CONFIG.jetSpeed * (dt / 16);
       if (keys.left) jetX -= s;
       if (keys.right) jetX += s;
@@ -1292,7 +1412,7 @@
     jetX = Math.max(halfW, Math.min(width - halfW, jetX));
     jetY = Math.max(halfH, Math.min(height - halfH, jetY));
 
-    if (!gameOver && !paused && !inFinalMission) {
+    if (!gameOver && !paused && !inFinalMission && gameStarted) {
       timeAliveMs += dt;
       score += (CONFIG.score.survivalPerSecond * dt) / 1000;
       roadScrollY -= CONFIG.roadScrollSpeed * (dt / 16);
@@ -1324,6 +1444,13 @@
       updateScenery(dt);
       updateExplosions(dt);
     }
+
+    if (inRulesIntro) {
+      updateRulesIntro(dt);
+    }
+
+    // update DOM-based final mission countdown timer
+    updateFinalStrikeTimerDom();
   }
 
   function draw() {
@@ -1335,6 +1462,10 @@
     drawMissiles();
     drawExplosions();
     drawHUD();
+    if (!gameStarted) {
+      drawStartMenu();
+      return;
+    }
     if (gameOver && inFinalMission) {
       drawFinalMissionResult();
     } else if (gameOver) {
@@ -1351,7 +1482,7 @@
     const dt = Math.min(now - prev, 64);
     loop.last = now;
 
-    if (!gameOver && !paused && !inFinalMission) {
+    if (!gameOver && !paused && !inFinalMission && gameStarted) {
       spawnMissiles(now);
       spawnScenery(now);
       spawnBullets(now);
@@ -1389,12 +1520,33 @@
   window.addEventListener('keydown', (e) => onKey(e, true));
   window.addEventListener('keyup', (e) => onKey(e, false));
   canvas.addEventListener('click', (e) => {
-    if (!gameOver) return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
+    if (!gameStarted && !inRulesIntro) {
+      const btnW = 260;
+      const btnH = 52;
+      const btnX = width / 2 - btnW / 2;
+      const btnY = height / 2 + 10;
+      if (x >= btnX && x <= btnX + btnW && y >= btnY && y <= btnY + btnH) {
+        inRulesIntro = true;
+        rulesIntroStep = 0;
+        rulesIntroElapsed = 0;
+        const overlay = document.getElementById('rulesOverlay');
+        if (overlay) {
+          overlay.style.visibility = 'visible';
+        }
+        const sideAdvisor = document.getElementById('intelAdvisor');
+        if (sideAdvisor) {
+          sideAdvisor.style.visibility = 'hidden';
+        }
+        setAdvisorRulesStep(0);
+      }
+      return;
+    }
+    if (!gameOver) return;
     if (inFinalMission) {
       const btnX = width / 2 - 130;
       const btnY = height / 2 - 40 + 26 * 4 + 44;
